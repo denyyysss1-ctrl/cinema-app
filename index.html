@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Кино Поиск Web App</title>
-    <!-- Подключаем скрипт Telegram для интеграции -->
     <script src="https://telegram.org"></script>
     <style>
         body {
@@ -17,11 +16,7 @@
             flex-direction: column;
             align-items: center;
         }
-        .container {
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
-        }
+        .container { width: 100%; max-width: 400px; text-align: center; }
         h2 { margin-bottom: 20px; color: var(--tg-theme-hint-color, #38bdf8); }
         input {
             width: 80%;
@@ -35,7 +30,7 @@
             outline: none;
         }
         input:focus { border-color: #38bdf8; }
-        button {
+        .btn-search {
             width: 86%;
             padding: 12px;
             background-color: var(--tg-theme-button-color, #38bdf8);
@@ -46,19 +41,28 @@
             font-weight: bold;
             cursor: pointer;
         }
-        button:hover { opacity: 0.9; }
         .error { color: #ef4444; margin-top: 10px; display: none; }
-        .player-container {
-            width: 100%;
-            margin-top: 20px;
-            display: none;
-        }
-        iframe {
-            width: 100%;
-            height: 250px;
-            border: none;
+        .result-container {
+            width: 86%;
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #27272a;
             border-radius: 8px;
-            background: #000;
+            border: 1px solid #3f3f46;
+            display: none;
+            box-sizing: border-box;
+        }
+        .movie-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; }
+        .btn-watch {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 0;
+            background-color: #22c55e;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            font-size: 16px;
         }
     </style>
 </head>
@@ -67,46 +71,53 @@
 <div class="container">
     <h2>🍿 Поиск фильма по коду</h2>
     <input type="text" id="movieCode" placeholder="Введите код фильма">
-    <button onclick="searchMovie()">Смотреть фильм</button>
+    <button class="btn-search" onclick="searchMovie()">Найти фильм</button>
     <div class="error" id="errorMsg">❌ Фильм с таким кодом не найден!</div>
 
-    <!-- Контейнер с плеером, куда загрузится сайт с фильмом -->
-    <div class="player-container" id="playerBox">
-        <h3 id="movieTitle"></h3>
-        <iframe id="videoPlayer" src="" allowfullscreen></iframe>
+    <div class="result-container" id="resultBox">
+        <div class="movie-title" id="movieTitle"></div>
+        <a href="" id="watchLink" class="btn-watch">▶️ Смотреть онлайн</a>
     </div>
 </div>
 
 <script>
-    // Инициализация Telegram Web App
     const tg = window.Telegram.WebApp;
     tg.ready();
-    tg.expand(); // Разворачиваем окно на максимум
+    tg.expand();
 
-    // База фильмов прямо внутри Web App для мгновенной проверки
-    const moviesDatabase = {
-        "123": {
-            title: "Начало (2010)",
-            url: "https://volk-s-wall-streete-lordfilm.ru/film/nachalo-2010/"
+    // Автоматически получаем список фильмов, который бот передал в ссылку
+    let moviesDatabase = {};
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const moviesData = urlParams.get('movies');
+        if (moviesData) {
+            moviesDatabase = JSON.parse(decodeURIComponent(moviesData));
         }
-    };
+    } catch (e) {
+        console.error("Ошибка при получении базы фильмов", e);
+    }
 
     function searchMovie() {
         const code = document.getElementById('movieCode').value.trim();
         const errorMsg = document.getElementById('errorMsg');
-        const playerBox = document.getElementById('playerBox');
-        const videoPlayer = document.getElementById('videoPlayer');
+        const resultBox = document.getElementById('resultBox');
+        const watchLink = document.getElementById('watchLink');
         const movieTitle = document.getElementById('movieTitle');
 
         if (moviesDatabase[code]) {
             errorMsg.style.display = 'none';
-            movieTitle.innerText = moviesDatabase[code].title;
-            // Устанавливаем ссылку на плеер/сайт фильма
-            videoPlayer.src = moviesDatabase[code].url;
-            playerBox.style.display = 'block';
+            movieTitle.innerText = "🎬 " + moviesDatabase[code].title;
+            watchLink.href = moviesDatabase[code].url;
+            
+            // Открываем внешние ссылки через встроенный браузер Telegram
+            watchLink.onclick = function(e) {
+                e.preventDefault();
+                tg.openLink(moviesDatabase[code].url);
+            };
+            
+            resultBox.style.display = 'block';
         } else {
-            playerBox.style.display = 'none';
-            videoPlayer.src = '';
+            resultBox.style.display = 'none';
             errorMsg.style.display = 'block';
         }
     }
